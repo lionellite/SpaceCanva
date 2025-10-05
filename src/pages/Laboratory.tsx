@@ -100,7 +100,7 @@ export default function Laboratory() {
     
     try {
       // Send data to backend
-      const response = await fetch('http://spacecanvabackend.onrender.app/api/predict', {
+      const response = await fetch('https://spacecanvabackend.onrender.com/api/predict', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
