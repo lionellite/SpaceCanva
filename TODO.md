@@ -1,0 +1,2 @@
+- [ ] Edit src/components/Navigation.tsx to import logo.png and replace Rocket with img tag
+- [ ] Run npm run dev and check the logo displays
