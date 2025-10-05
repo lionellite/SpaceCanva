@@ -260,7 +260,7 @@ Peux-tu créer une réponse détaillée avec des visualisations (tableau des pro
                       />
                       <span className="text-sm font-medium flex-1">{point.label || `Point ${idx + 1}`}</span>
                       <span className="text-xs text-muted-foreground">
-                        ({point.x.toFixed(2)}, {point.y.toFixed(2)})
+                        ({typeof point.x === 'number' ? point.x.toFixed(2) : parseFloat(point.x).toFixed(2)}, {typeof point.y === 'number' ? point.y.toFixed(2) : parseFloat(point.y).toFixed(2)})
                       </span>
                     </div>
                   ))
