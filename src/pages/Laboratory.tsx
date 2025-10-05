@@ -100,7 +100,7 @@ export default function Laboratory() {
     
     try {
       // Send data to backend
-      const response = await fetch('http://localhost:5000/api/predict', {
+      const response = await fetch('http://spacecanvabackend.onrender.app/api/predict', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -369,7 +369,7 @@ Peux-tu créer une réponse détaillée avec des visualisations (tableau des pro
 
     try {
       // Check if user is asking about exoplanet verification
-      const exoplanetKeywords = ['vérifier', 'verify', 'check', 'exoplanète', 'exoplanet', 'candidat', 'candidate', 'transit', 'données'];
+      const exoplanetKeywords = ['vérifier', 'verify', 'check', 'exoplanète', 'exoplanet', 'candidat', 'candidate', 'transit', 'données', 'détecter', 'detect', 'faux positif', 'false positive'];
       const isExoplanetVerification = exoplanetKeywords.some(keyword => 
         userInput.toLowerCase().includes(keyword)
       ) && (userInput.toLowerCase().includes('comment') || userInput.toLowerCase().includes('how'));

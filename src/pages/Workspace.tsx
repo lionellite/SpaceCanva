@@ -99,7 +99,7 @@ export default function Workspace() {
 
   const loadWorkspaces = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/workspace/list', {
+      const response = await fetch('http://spacecanvabackend.onrender.app//api/workspace/list', {
         headers: {
           'X-Clerk-User-Id': user?.id || ''
         }
@@ -124,7 +124,7 @@ export default function Workspace() {
 
     try {
       const response = await fetch(
-        `http://localhost:5000/api/workspace/history?workspace_key=${currentWorkspace.workspace_key}&limit=50`,
+        `http://spacecanvabackend.onrender.app//api/workspace/history?workspace_key=${currentWorkspace.workspace_key}&limit=50`,
         {
           headers: {
             'X-Clerk-User-Id': user?.id || ''
@@ -146,7 +146,7 @@ export default function Workspace() {
 
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:5000/api/workspace/create', {
+      const response = await fetch('http://spacecanvabackend.onrender.app//api/workspace/create', {
         method: 'POST',
         headers: {
           'X-Clerk-User-Id': user?.id || '',
@@ -178,7 +178,7 @@ export default function Workspace() {
 
     try {
       const response = await fetch(
-        `http://localhost:5000/api/training/datasets?workspace_key=${currentWorkspace.workspace_key}`,
+        `http://spacecanvabackend.onrender.app//api/training/datasets?workspace_key=${currentWorkspace.workspace_key}`,
         {
           headers: {
             'X-Clerk-User-Id': user?.id || ''
@@ -200,7 +200,7 @@ export default function Workspace() {
 
     try {
       const response = await fetch(
-        `http://localhost:5000/api/training/sessions?workspace_key=${currentWorkspace.workspace_key}`,
+        `http://spacecanvabackend.onrender.app//api/training/sessions?workspace_key=${currentWorkspace.workspace_key}`,
         {
           headers: {
             'X-Clerk-User-Id': user?.id || ''
@@ -228,7 +228,7 @@ export default function Workspace() {
       formData.append('workspace_key', currentWorkspace.workspace_key);
       formData.append('name', file.name);
 
-      const response = await fetch('http://localhost:5000/api/training/upload-dataset', {
+      const response = await fetch('http://spacecanvabackend.onrender.app//api/training/upload-dataset', {
         method: 'POST',
         headers: {
           'X-Clerk-User-Id': user?.id || ''
@@ -254,7 +254,7 @@ export default function Workspace() {
 
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:5000/api/training/start', {
+      const response = await fetch('http://spacecanvabackend.onrender.app//api/training/start', {
         method: 'POST',
         headers: {
           'X-Clerk-User-Id': user?.id || '',

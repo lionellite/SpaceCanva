@@ -1,5 +1,5 @@
 // Test script pour vérifier l'API NASA
-import { nasaExoplanetService } from './src/services/nasaApi';
+import { nasaExoplanetService } from './src/services/nasaApi.ts';
 
 async function testAPI() {
   try {

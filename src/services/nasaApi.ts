@@ -1,4 +1,4 @@
-import { Exoplanet, ExoplanetResponse } from '@/types/exoplanet';
+import { Exoplanet, ExoplanetResponse } from '../types/exoplanet';
 
 const PROXY_API_BASE = '/api/exoplanetarchive';
 
