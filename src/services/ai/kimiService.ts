@@ -35,7 +35,7 @@ export class KimiService {
     return KimiService.instance;
   }
 
-  async chat(messages: KimiMessage[], model: string = 'moonshot-v1-8k'): Promise<string> {
+  async chat(messages: KimiMessage[], model: string = 'moonshot-v1-8k', temperature: number = 0.7): Promise<string> {
     try {
       const response = await fetch(`${this.baseURL}/chat/completions`, {
         method: 'POST',
@@ -46,7 +46,7 @@ export class KimiService {
         body: JSON.stringify({
           model,
           messages,
-          temperature: 0.7,
+          temperature,
           max_tokens: 1000,
           stream: false,
         }),
@@ -70,7 +70,7 @@ export class KimiService {
   }
 
   // Specialized method for space/astrophysics questions with structured output
-  async chatAboutSpace(userMessage: string): Promise<{
+  async chatAboutSpace(userMessage: string, temperature: number = 0.7): Promise<{
     text: string;
     visualizations?: Array<{
       type: 'chart' | 'table' | 'gauge' | 'custom';
@@ -210,7 +210,7 @@ ALWAYS provide real scientific data in your visualizations. Use MULTIPLE visuali
       { role: 'user', content: userMessage }
     ];
 
-    const response = await this.chat(messages, 'moonshot-v1-8k');
+    const response = await this.chat(messages, 'moonshot-v1-8k', temperature);
     
     // Parse the response to extract ALL visualization data
     const vizMatches = response.matchAll(/---VISUALIZATION---([\s\S]*?)---END---/g);

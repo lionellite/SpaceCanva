@@ -6,8 +6,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
-import { Upload, BarChart3, TrendingUp, Database, Plus, Key, History, Loader2, FileUp, Play, CheckCircle, XCircle, Clock, Download, FileText, AlertCircle, X } from 'lucide-react';
+import { Upload, BarChart3, TrendingUp, Database, Plus, Key, History, Loader2, FileUp, Play, CheckCircle, XCircle, Clock, Download, FileText, AlertCircle, X, Copy } from 'lucide-react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import WorkspaceSelector from '@/components/WorkspaceSelector';
+import { toast } from 'sonner';
 
 const mockAccuracyData = [
   { name: 'Epoch 1', accuracy: 65 },
@@ -72,6 +74,7 @@ export default function Workspace() {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newWorkspaceName, setNewWorkspaceName] = useState('');
   const [newWorkspaceDesc, setNewWorkspaceDesc] = useState('');
+  const [showWorkspaceSelector, setShowWorkspaceSelector] = useState(false);
   
   // Training states
   const [datasets, setDatasets] = useState<Dataset[]>([]);
@@ -102,6 +105,13 @@ export default function Workspace() {
     }
   }, [isSignedIn]);
 
+  // Show workspace selector if no current workspace
+  useEffect(() => {
+    if (isSignedIn && workspaces.length === 0 && !currentWorkspace) {
+      setShowWorkspaceSelector(true);
+    }
+  }, [isSignedIn, workspaces.length, currentWorkspace]);
+
   // Load analyses and training data when workspace changes
   useEffect(() => {
     if (currentWorkspace) {
@@ -123,13 +133,29 @@ export default function Workspace() {
         const data = await response.json();
         setWorkspaces(data.workspaces);
         
-        // Auto-select first workspace if available
+        // Auto-select first workspace if available and no current workspace
         if (data.workspaces.length > 0 && !currentWorkspace) {
           setCurrentWorkspace(data.workspaces[0]);
+          setShowWorkspaceSelector(false);
         }
       }
     } catch (error) {
       console.error('Failed to load workspaces:', error);
+    }
+  };
+
+  const handleWorkspaceSelected = (workspace: Workspace) => {
+    setCurrentWorkspace(workspace);
+    setShowWorkspaceSelector(false);
+  };
+
+  const copyWorkspaceKey = async (workspaceKey: string) => {
+    try {
+      await navigator.clipboard.writeText(workspaceKey);
+      toast.success('Workspace key copied to clipboard!');
+    } catch (error) {
+      console.error('Failed to copy workspace key:', error);
+      toast.error('Failed to copy workspace key');
     }
   };
 
@@ -507,25 +533,42 @@ export default function Workspace() {
     );
   }
 
+  // Show workspace selector if no current workspace
+  if (showWorkspaceSelector || !currentWorkspace) {
+    return <WorkspaceSelector onWorkspaceSelected={handleWorkspaceSelected} />;
+  }
+
   return (
-    <div className="relative min-h-screen pt-24 pb-12">
-      <div className="container mx-auto px-6">
-        <div className="mb-8 flex items-center justify-between">
+    <div className="relative min-h-screen pt-16 sm:pt-20 md:pt-24 pb-8 sm:pb-12">
+      <div className="container mx-auto px-4 sm:px-6">
+        <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="font-display text-5xl font-bold mb-4 bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
+            <h1 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold mb-2 sm:mb-4 bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
               Expert Workspace
             </h1>
-            <p className="text-muted-foreground font-tech text-lg">
+            <p className="text-muted-foreground font-tech text-base sm:text-lg">
               Welcome back, {user?.firstName || 'Expert'}! Manage your exoplanet analysis workspaces.
             </p>
           </div>
-          <Button 
-            onClick={() => setShowCreateForm(true)}
-            className="bg-gradient-to-r from-cyan-400 to-blue-500 hover:opacity-90"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            New Workspace
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+            <Button 
+              variant="outline"
+              onClick={() => setShowWorkspaceSelector(true)}
+              className="border-cyan-400/50 text-cyan-400 hover:bg-cyan-400/20 text-sm"
+              size="sm"
+            >
+              <Key className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+              Switch Workspace
+            </Button>
+            <Button 
+              onClick={() => setShowCreateForm(true)}
+              className="bg-gradient-to-r from-cyan-400 to-blue-500 hover:opacity-90 text-sm"
+              size="sm"
+            >
+              <Plus className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+              New Workspace
+            </Button>
+          </div>
         </div>
 
         {/* Create Workspace Form */}
@@ -605,6 +648,14 @@ export default function Workspace() {
                     <code className="bg-muted px-2 py-1 rounded text-xs">
                       {currentWorkspace.workspace_key.substring(0, 16)}...
                     </code>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => copyWorkspaceKey(currentWorkspace.workspace_key)}
+                      className="h-6 w-6 p-0 hover:bg-cyan-400/20"
+                    >
+                      <Copy className="w-3 h-3" />
+                    </Button>
                   </div>
                   <div className="flex items-center gap-2">
                     <History className="w-4 h-4" />
@@ -742,44 +793,47 @@ export default function Workspace() {
         </div>
 
         {/* Actions */}
-        <div className="grid md:grid-cols-3 gap-6">
-          <Card className="glass-strong p-6 text-center border-cyan-400/30">
-            <Upload className="w-12 h-12 mx-auto mb-4 text-cyan-400" />
-            <h3 className="font-tech font-semibold mb-2">Load New Dataset</h3>
-            <p className="text-sm text-muted-foreground mb-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+          <Card className="glass-strong p-4 sm:p-6 text-center border-cyan-400/30">
+            <Upload className="w-8 h-8 sm:w-12 sm:h-12 mx-auto mb-3 sm:mb-4 text-cyan-400" />
+            <h3 className="font-tech font-semibold mb-2 text-sm sm:text-base">Load New Dataset</h3>
+            <p className="text-xs sm:text-sm text-muted-foreground mb-3 sm:mb-4">
               Import CSV or JSON stellar data
             </p>
             <Button 
               variant="outline" 
-              className="w-full border-cyan-400/50 text-cyan-400 hover:bg-cyan-400/20"
+              className="w-full border-cyan-400/50 text-cyan-400 hover:bg-cyan-400/20 text-xs sm:text-sm"
+              size="sm"
             >
               Choose File
             </Button>
           </Card>
 
-          <Card className="glass-strong p-6 text-center border-cyan-400/30">
-            <Database className="w-12 h-12 mx-auto mb-4 text-cyan-400" />
-            <h3 className="font-tech font-semibold mb-2">Explore Predictions</h3>
-            <p className="text-sm text-muted-foreground mb-4">
+          <Card className="glass-strong p-4 sm:p-6 text-center border-cyan-400/30">
+            <Database className="w-8 h-8 sm:w-12 sm:h-12 mx-auto mb-3 sm:mb-4 text-cyan-400" />
+            <h3 className="font-tech font-semibold mb-2 text-sm sm:text-base">Explore Predictions</h3>
+            <p className="text-xs sm:text-sm text-muted-foreground mb-3 sm:mb-4">
               View detailed model outputs
             </p>
             <Button 
               variant="outline" 
-              className="w-full border-cyan-400/50 text-cyan-400 hover:bg-cyan-400/20"
+              className="w-full border-cyan-400/50 text-cyan-400 hover:bg-cyan-400/20 text-xs sm:text-sm"
+              size="sm"
             >
               View Results
             </Button>
           </Card>
 
-          <Card className="glass-strong p-6 text-center border-cyan-400/30">
-            <TrendingUp className="w-12 h-12 mx-auto mb-4 text-cyan-400" />
-            <h3 className="font-tech font-semibold mb-2">Test Edge Cases</h3>
-            <p className="text-sm text-muted-foreground mb-4">
+          <Card className="glass-strong p-4 sm:p-6 text-center border-cyan-400/30 sm:col-span-2 lg:col-span-1">
+            <TrendingUp className="w-8 h-8 sm:w-12 sm:h-12 mx-auto mb-3 sm:mb-4 text-cyan-400" />
+            <h3 className="font-tech font-semibold mb-2 text-sm sm:text-base">Test Edge Cases</h3>
+            <p className="text-xs sm:text-sm text-muted-foreground mb-3 sm:mb-4">
               Challenge the model with ambiguous data
             </p>
             <Button 
               variant="outline" 
-              className="w-full border-cyan-400/50 text-cyan-400 hover:bg-cyan-400/20"
+              className="w-full border-cyan-400/50 text-cyan-400 hover:bg-cyan-400/20 text-xs sm:text-sm"
+              size="sm"
             >
               Run Tests
             </Button>
@@ -1241,23 +1295,7 @@ export default function Workspace() {
           </Card>
         )}
 
-        {/* Empty State */}
-        {workspaces.length === 0 && !showCreateForm && (
-          <Card className="glass-strong p-12 text-center border-cyan-400/30">
-            <Database className="w-16 h-16 mx-auto mb-4 text-cyan-400 opacity-50" />
-            <h3 className="text-2xl font-bold mb-2">No Workspaces Yet</h3>
-            <p className="text-muted-foreground mb-6">
-              Create your first workspace to start analyzing exoplanets
-            </p>
-            <Button 
-              onClick={() => setShowCreateForm(true)}
-              className="bg-gradient-to-r from-cyan-400 to-blue-500"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Create Your First Workspace
-            </Button>
-          </Card>
-        )}
+        
       </div>
     </div>
   );

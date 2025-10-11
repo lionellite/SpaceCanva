@@ -163,7 +163,7 @@ Analyse:
 
 Peux-tu créer une réponse détaillée avec des visualisations (tableau des probabilités, tableau des prédictions vs entrées, jauge de confiance, et un composant personnalisé pour le résultat avec émoji approprié) ?`;
 
-      const aiResult = await kimiService.chatAboutSpace(aiPrompt);
+      const aiResult = await kimiService.chatAboutSpace(aiPrompt, temperature[0]);
       
       // Add AI response with visualizations and typing effect
       if (aiResult.text && aiResult.text.length > 10) {
@@ -570,7 +570,7 @@ Peux-tu créer une réponse détaillée avec des visualisations (tableau des pro
       }
 
       // Call Kimi API for intelligent response with visualizations
-      const aiResult = await kimiService.chatAboutSpace(userInput);
+      const aiResult = await kimiService.chatAboutSpace(userInput, temperature[0]);
 
       // First, add the text response with typing effect (only if there's meaningful text)
       if (aiResult.text && aiResult.text.length > 10) {
@@ -775,33 +775,41 @@ Peux-tu créer une réponse détaillée avec des visualisations (tableau des pro
   };
 
   return (
-    <div className="relative min-h-screen pt-24 pb-12">
-      <div className="container mx-auto px-6">
-        <div className="mb-8">
-          <h1 className="font-display text-5xl font-bold mb-4 bg-gradient-to-r from-secondary to-purple-400 bg-clip-text text-transparent">
+    <div className="relative min-h-screen pt-16 sm:pt-20 md:pt-24 pb-8 sm:pb-12">
+      <div className="container mx-auto px-4 sm:px-6">
+        <div className="mb-6 sm:mb-8">
+          <h1 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold mb-2 sm:mb-4 bg-gradient-to-r from-secondary to-purple-400 bg-clip-text text-transparent">
             Laboratory
           </h1>
-          <p className="text-muted-foreground font-tech text-lg">
+          <p className="text-muted-foreground font-tech text-base sm:text-lg">
             AI-powered stellar analysis and cosmic intelligence
           </p>
         </div>
 
-        <div className="grid lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6">
           {/* Hyperparameters Sidebar */}
-          <Card className="glass-strong p-6 border-secondary/30 h-fit">
-            <h3 className="font-tech font-semibold mb-6 flex items-center gap-2 text-secondary">
-              <Cpu className="w-5 h-5" />
+          <Card className="glass-strong p-4 sm:p-6 border-secondary/30 h-fit order-2 lg:order-1">
+            <h3 className="font-tech font-semibold mb-4 sm:mb-6 flex items-center gap-2 text-secondary text-sm sm:text-base">
+              <Cpu className="w-4 h-4 sm:w-5 sm:h-5" />
               Hyperparameters
             </h3>
 
-            <div className="space-y-6">
+            <div className="space-y-4 sm:space-y-6">
               {/* Temperature Slider */}
-              <div className="space-y-3">
+              <div className="space-y-3 sm:space-y-4">
                 <div className="flex items-center justify-between">
-                  <Label className="text-sm font-tech">Temperature</Label>
-                  <span className="text-sm font-mono text-primary bg-primary/10 px-2 py-1 rounded">
-                    {temperature[0].toFixed(2)}
-                  </span>
+                  <Label className="text-xs sm:text-sm font-tech">Temperature</Label>
+                  <div className="flex items-center gap-1 sm:gap-2">
+                    <span className="text-xs sm:text-sm font-mono text-primary bg-primary/10 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded">
+                      {temperature[0].toFixed(2)}
+                    </span>
+                    <div className="w-6 sm:w-8 h-3 sm:h-4 bg-gradient-to-r from-blue-500 to-red-500 rounded-full relative">
+                      <div 
+                        className="absolute top-0 left-0 w-0.5 sm:w-1 h-full bg-white rounded-full shadow-sm"
+                        style={{ left: `${temperature[0] * 100}%` }}
+                      />
+                    </div>
+                  </div>
                 </div>
                 <Slider
                   value={temperature}
@@ -811,9 +819,34 @@ Peux-tu créer une réponse détaillée avec des visualisations (tableau des pro
                   step={0.01}
                   className="cursor-pointer"
                 />
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span className="hidden sm:inline">Conservative (0.0)</span>
+                  <span className="sm:hidden">Cons.</span>
+                  <span className="hidden sm:inline">Balanced (0.5)</span>
+                  <span className="sm:hidden">Bal.</span>
+                  <span className="hidden sm:inline">Creative (1.0)</span>
+                  <span className="sm:hidden">Creat.</span>
+                </div>
                 <p className="text-xs text-muted-foreground">
-                  Controls randomness in AI responses
+                  Controls randomness and creativity in AI responses
                 </p>
+                
+                {/* Temperature Effect Indicator */}
+                <div className="mt-3 p-2 sm:p-3 rounded-lg bg-gradient-to-r from-background/30 to-background/10 border border-border/30">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-1.5 sm:w-2 h-1.5 sm:h-2 rounded-full bg-secondary animate-pulse" />
+                    <span className="text-xs font-tech text-secondary">Current Setting</span>
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {temperature[0] < 0.3 ? (
+                      <span>🎯 <strong className="hidden sm:inline">Conservative:</strong><strong className="sm:hidden">Cons:</strong> More focused, deterministic responses</span>
+                    ) : temperature[0] < 0.7 ? (
+                      <span>⚖️ <strong className="hidden sm:inline">Balanced:</strong><strong className="sm:hidden">Bal:</strong> Good mix of accuracy and creativity</span>
+                    ) : (
+                      <span>🎨 <strong className="hidden sm:inline">Creative:</strong><strong className="sm:hidden">Creat:</strong> More diverse, imaginative responses</span>
+                    )}
+                  </div>
+                </div>
               </div>
 
               {/* Placeholder for future parameters */}
@@ -827,10 +860,10 @@ Peux-tu créer une réponse détaillée avec des visualisations (tableau des pro
           </Card>
 
           {/* Chat Interface */}
-          <div className="lg:col-span-3 flex flex-col">
+          <div className="lg:col-span-3 flex flex-col order-1 lg:order-2">
             <Card className="glass-strong flex-1 flex flex-col border-secondary/30">
               {/* Messages */}
-              <div className="flex-1 p-6 space-y-4 overflow-y-auto max-h-[600px]">
+              <div className="flex-1 p-3 sm:p-4 md:p-6 space-y-3 sm:space-y-4 overflow-y-auto max-h-[400px] sm:max-h-[500px] md:max-h-[600px]">
                 {messages.map((message, index) => {
                   // Check if this is a visualization and if the next message is also a visualization
                   const isVisualization = message.role === 'assistant' && 
@@ -883,19 +916,19 @@ Peux-tu créer une réponse détaillée avec des visualisations (tableau des pro
                   <div key={index}>
                     {message.role === 'user' ? (
                       <div className="flex justify-end">
-                        <div className="max-w-[80%] p-6 rounded-2xl bg-gradient-to-br from-primary to-cyan-400 text-background shadow-lg">
-                          <div className="flex items-center gap-2 mb-3">
-                            <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
-                              <span className="text-white text-sm font-bold">U</span>
+                        <div className="max-w-[85%] sm:max-w-[80%] p-3 sm:p-4 md:p-6 rounded-xl sm:rounded-2xl bg-gradient-to-br from-primary to-cyan-400 text-background shadow-lg">
+                          <div className="flex items-center gap-2 mb-2 sm:mb-3">
+                            <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-white/20 flex items-center justify-center">
+                              <span className="text-white text-xs sm:text-sm font-bold">U</span>
                             </div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1 sm:gap-2">
                               <span className="text-xs font-tech text-white/80">Vous</span>
-                              <span className="text-xs text-white/60">
+                              <span className="text-xs text-white/60 hidden sm:inline">
                                 {message.timestamp.toLocaleTimeString()}
                               </span>
                             </div>
                           </div>
-                          <p className="text-sm leading-relaxed">
+                          <p className="text-xs sm:text-sm leading-relaxed">
                             {message.content.type === 'text' ? message.content.content : 'Message utilisateur'}
                           </p>
                         </div>
@@ -903,19 +936,19 @@ Peux-tu créer une réponse détaillée avec des visualisations (tableau des pro
                     ) : (
                       <div className="flex justify-start">
                         {message.content.type === 'text' ? (
-                          <div className="max-w-[80%] p-6 rounded-2xl glass-strong border border-border/50 shadow-lg">
-                            <div className="flex items-center gap-2 mb-4">
-                              <div className="w-8 h-8 rounded-full bg-gradient-to-r from-secondary to-purple-400 flex items-center justify-center">
-                                <span className="text-white text-sm font-bold">AI</span>
+                          <div className="max-w-[85%] sm:max-w-[80%] p-3 sm:p-4 md:p-6 rounded-xl sm:rounded-2xl glass-strong border border-border/50 shadow-lg">
+                            <div className="flex items-center gap-2 mb-3 sm:mb-4">
+                              <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-gradient-to-r from-secondary to-purple-400 flex items-center justify-center">
+                                <span className="text-white text-xs sm:text-sm font-bold">AI</span>
                               </div>
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-1 sm:gap-2">
                                 <span className="text-xs font-tech text-secondary">Assistant IA</span>
-                                <span className="text-xs text-muted-foreground">
+                                <span className="text-xs text-muted-foreground hidden sm:inline">
                                   {message.timestamp.toLocaleTimeString()}
                                 </span>
                               </div>
                             </div>
-                            <div className="space-y-3">
+                            <div className="space-y-2 sm:space-y-3">
                               {formatTextContent(message.content.content)}
                             </div>
                           </div>
@@ -1143,30 +1176,32 @@ Peux-tu créer une réponse détaillée avec des visualisations (tableau des pro
               </div>
 
               {/* Input */}
-              <div className="p-6 border-t border-border/50">
-                <div className="flex gap-3">
+              <div className="p-3 sm:p-4 md:p-6 border-t border-border/50">
+                <div className="flex gap-2 sm:gap-3">
                   <Input
-                    placeholder="Ask about stars, exoplanets, or stellar phenomena..."
+                    placeholder="Ask about stars, exoplanets..."
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-                    className="glass-strong border-secondary/30 flex-1"
+                    className="glass-strong border-secondary/30 flex-1 text-sm sm:text-base"
                   />
                   <Button
                     onClick={handleCSVUpload}
                     disabled={isAnalyzing}
                     variant="outline"
-                    className="border-secondary/50 text-secondary hover:bg-secondary/20"
+                    size="sm"
+                    className="border-secondary/50 text-secondary hover:bg-secondary/20 px-2 sm:px-3"
                     title="Upload CSV for exoplanet analysis"
                   >
-                    <FileSpreadsheet className="w-4 h-4" />
+                    <FileSpreadsheet className="w-3 h-3 sm:w-4 sm:h-4" />
                   </Button>
                   <Button
                     onClick={handleSend}
                     disabled={!input.trim() || isAnalyzing}
-                    className="bg-gradient-to-r from-secondary to-purple-400 hover:opacity-90 glow-secondary"
+                    size="sm"
+                    className="bg-gradient-to-r from-secondary to-purple-400 hover:opacity-90 glow-secondary px-2 sm:px-3"
                   >
-                    <Send className="w-4 h-4" />
+                    <Send className="w-3 h-3 sm:w-4 sm:h-4" />
                   </Button>
                 </div>
                 <input
