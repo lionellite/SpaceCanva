@@ -1,73 +1,48 @@
-# Welcome to your Lovable project
+# SpaceCanva
 
-## Project info
+SpaceCanva is a modern web application that provides an interactive, customizable canvas experience for visual creativity, collaboration, and prototyping in the browser. Built with Vite, TypeScript, React, shadcn-ui, and Tailwind CSS, SpaceCanva combines scalability and performance with an intuitive UI.
 
-**URL**: https://lovable.dev/projects/3902e272-915b-45a4-a8b3-a3f6b5a53c21
+## Features
 
-## How can I edit this code?
+- **Interactive Canvas**: Draw, move, and manipulate objects and components visually.
+- **Collaboration Ready**: Designed to support multi-user editing and sharing.
+- **Component-based Architecture**: Easily extend and integrate new features.
+- **Responsive Design**: Optimized for desktop and mobile devices.
+- **Modern Tooling**: Fast development workflow with Vite and hot-reloading.
 
-There are several ways of editing your application.
+## How to Edit the Code
 
-**Use Lovable**
+You can edit SpaceCanva in the following way:
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/3902e272-915b-45a4-a8b3-a3f6b5a53c21) and start prompting.
+**Locally with Your IDE**
 
-Changes made via Lovable will be committed automatically to this repo.
+Clone the repository and work as you like. Changes pushed to GitHub sync with Lovable.
 
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
+_Requirements: Node.js & npm ([install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating))_
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
 git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
 cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
 npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+**Direct GitHub Editing**
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+- Use the "Edit" button on any file in GitHub to make changes and commit.
 
-**Use GitHub Codespaces**
+**GitHub Codespaces**
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+- Start a Codespace from your repo's "Code" menu for a cloud-based dev environment.
 
-## What technologies are used for this project?
+## Technologies Used
 
-This project is built with:
+- **Vite**: High-speed frontend tooling
+- **TypeScript**: Type-safe JavaScript
+- **React**: Declarative UI framework
+- **shadcn-ui**: UI components
+- **Tailwind CSS**: Utility-first CSS framework
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+---
 
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/3902e272-915b-45a4-a8b3-a3f6b5a53c21) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+SpaceCanva empowers developers and teams to visualize, create, and iterate on ideas collaboratively, all from the browser.
