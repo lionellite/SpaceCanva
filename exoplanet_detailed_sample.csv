@@ -1,0 +1,33 @@
+# Exoplanet Sample Data for SpaceCanva Laboratory Testing
+# This CSV contains sample exoplanet transit data for testing the CSV upload functionality
+# 
+# Column Descriptions:
+# mission: Space mission that collected the data (kepler, k2, tess)
+# period: Orbital period in days
+# duration: Transit duration in hours
+# depth: Transit depth in parts per million (ppm)
+# impact: Impact parameter (0 = central transit, >1 = grazing/false positive)
+# snr: Signal-to-noise ratio
+# steff: Stellar effective temperature in Kelvin
+# srad: Stellar radius in solar radii (R☉)
+# slogg: Stellar surface gravity in dex
+# tmag: TESS magnitude
+#
+# Data Format: mission,period,duration,depth,impact,snr,steff,srad,slogg,tmag
+
+mission,period,duration,depth,impact,snr,steff,srad,slogg,tmag
+kepler,3.52,2.5,1000,0.3,15.2,5778,1.0,4.5,12.5
+kepler,5.12,3.2,850,0.1,18.7,5200,0.8,4.6,11.8
+tess,1.89,1.8,1200,0.5,12.3,6200,1.2,4.4,13.1
+kepler,7.45,4.1,750,0.2,22.1,4800,0.7,4.7,10.9
+tess,2.33,2.1,950,0.4,16.8,5500,0.9,4.5,12.7
+kepler,4.78,3.5,1100,0.1,19.4,6000,1.1,4.3,11.5
+tess,6.12,3.8,680,0.3,14.6,5100,0.8,4.6,12.2
+kepler,2.15,1.9,1300,0.6,11.2,5800,1.0,4.4,13.5
+tess,8.34,4.5,620,0.2,25.3,4600,0.6,4.8,10.3
+kepler,3.89,2.8,900,0.3,17.9,5400,0.9,4.5,12.0
+k2,4.25,2.9,1050,0.2,16.3,5600,0.95,4.45,12.3
+kepler,6.78,3.9,720,0.4,13.8,4900,0.75,4.65,11.2
+tess,2.67,2.3,880,0.3,15.7,5300,0.85,4.55,12.8
+kepler,9.12,4.8,650,0.1,24.1,4500,0.65,4.75,10.1
+tess,1.45,1.6,1350,0.7,9.8,5900,1.05,4.35,13.8

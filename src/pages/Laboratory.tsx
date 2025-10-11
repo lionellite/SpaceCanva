@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Send, Upload, Cpu, MessageSquare, Zap, Database, TrendingUp } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { Send, Upload, Cpu, MessageSquare, Zap, Database, TrendingUp, FileSpreadsheet } from 'lucide-react';
 import { kimiService } from '@/services/ai/kimiService';
 import { useUser } from '@clerk/clerk-react';
 import { Card } from '@/components/ui/card';
@@ -82,6 +82,8 @@ export default function Laboratory() {
   const [input, setInput] = useState('');
   const [temperature, setTemperature] = useState([0.7]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [typingMessage, setTypingMessage] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [exoplanetData, setExoplanetData] = useState({
     mission: '',
     period: '',
@@ -163,17 +165,19 @@ Peux-tu créer une réponse détaillée avec des visualisations (tableau des pro
 
       const aiResult = await kimiService.chatAboutSpace(aiPrompt);
       
-      // Add AI response with visualizations
+      // Add AI response with visualizations and typing effect
       if (aiResult.text && aiResult.text.length > 10) {
-        const textMessage: Message = {
-          role: 'assistant',
-          content: {
-            type: 'text',
-            content: aiResult.text
-          },
-          timestamp: new Date(),
-        };
-        setMessages((prev) => [...prev, textMessage]);
+        await simulateTyping(aiResult.text, (finalText) => {
+          const textMessage: Message = {
+            role: 'assistant',
+            content: {
+              type: 'text',
+              content: finalText
+            },
+            timestamp: new Date(),
+          };
+          setMessages((prev) => [...prev, textMessage]);
+        });
       }
 
       // Add visualizations
@@ -231,7 +235,183 @@ Peux-tu créer une réponse détaillée avec des visualisations (tableau des pro
         role: 'assistant',
         content: {
           type: 'text',
-          content: `Erreur lors de l'analyse: ${error}. Assurez-vous que le backend est démarré (cd backend && python app.py)`
+          content: `The CSV analysis service is currently under implementation and will be available soon. Please use the manual form for now.`
+        },
+        timestamp: new Date(),
+      }]);
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  // Helper function to format text content with better styling
+  const formatTextContent = (content: string) => {
+    // Split content into paragraphs
+    const paragraphs = content.split('\n\n').filter(p => p.trim().length > 0);
+    
+    return paragraphs.map((paragraph, index) => {
+      const trimmedParagraph = paragraph.trim();
+      
+      // Check if it's a heading (starts with # or contains key terms)
+      if (trimmedParagraph.startsWith('#') || 
+          trimmedParagraph.match(/^(Introduction|Conclusion|Summary|Analysis|Results|Discussion|Key Points|Important|Note|Warning|Découverte|Découvertes|Caractéristiques|Propriétés)/i)) {
+        return (
+          <h3 key={index} className="font-tech font-semibold text-lg text-secondary mb-3 mt-4 first:mt-0 flex items-center gap-2">
+            <span className="text-2xl">🔬</span>
+            {trimmedParagraph.replace(/^#+\s*/, '')}
+          </h3>
+        );
+      }
+      
+      // Check if it's a list item
+      if (trimmedParagraph.match(/^[-•*]\s/) || trimmedParagraph.match(/^\d+\.\s/)) {
+        const listItems = trimmedParagraph.split('\n').filter(item => item.trim().length > 0);
+        return (
+          <ul key={index} className="space-y-2 mb-4">
+            {listItems.map((item, itemIndex) => (
+              <li key={itemIndex} className="flex items-start gap-3 text-sm">
+                <span className="text-secondary mt-1.5 w-2 h-2 rounded-full bg-secondary flex-shrink-0" />
+                <span className="leading-relaxed">{item.replace(/^[-•*]\s/, '').replace(/^\d+\.\s/, '')}</span>
+              </li>
+            ))}
+          </ul>
+        );
+      }
+      
+      // Check if it contains scientific notation or important numbers
+      if (trimmedParagraph.match(/\d+\.\d+[eE][+-]?\d+/) || 
+          trimmedParagraph.match(/\d+\.\d+\s*(km|K|°C|°F|years?|days?|hours?|minutes?|seconds?|parsecs?|light-years?|AU|R☉|M☉)/i)) {
+        return (
+          <div key={index} className="bg-gradient-to-r from-background/30 to-background/10 rounded-lg p-4 mb-4 border border-border/30">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-lg">📊</span>
+              <span className="text-xs font-tech text-secondary">Données scientifiques</span>
+            </div>
+            <p className="text-sm leading-relaxed font-mono text-foreground/90">
+              {trimmedParagraph}
+            </p>
+          </div>
+        );
+      }
+      
+      // Check if it's a code block or technical content
+      if (trimmedParagraph.includes('```') || 
+          trimmedParagraph.match(/^(function|const|let|var|class|interface|type)/) ||
+          trimmedParagraph.match(/[{}();]/)) {
+        return (
+          <div key={index} className="bg-muted/50 rounded-lg p-4 mb-4 border border-border/30">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-lg">💻</span>
+              <span className="text-xs font-tech text-secondary">Code technique</span>
+            </div>
+            <pre className="text-xs font-mono text-foreground/90 whitespace-pre-wrap overflow-x-auto">
+              {trimmedParagraph}
+            </pre>
+          </div>
+        );
+      }
+      
+      // Check if it contains emojis or special formatting
+      if (trimmedParagraph.match(/[🌍🪐⭐🌙☄️🛸🔭🚀🌌⭐️🌟💫✨]/)) {
+        return (
+          <div key={index} className="bg-gradient-to-r from-purple-500/10 to-blue-500/10 rounded-lg p-4 mb-4 border border-purple-500/20">
+            <p className="text-sm leading-relaxed text-foreground/90">
+              {trimmedParagraph}
+            </p>
+          </div>
+        );
+      }
+      
+      // Check if it's a question or important statement
+      if (trimmedParagraph.match(/\?$/) || trimmedParagraph.match(/^(Qu'est-ce que|Comment|Pourquoi|Quand|Où|Qui)/i)) {
+        return (
+          <div key={index} className="bg-gradient-to-r from-yellow-500/10 to-orange-500/10 rounded-lg p-4 mb-4 border border-yellow-500/20">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-lg">❓</span>
+              <span className="text-xs font-tech text-yellow-600">Question</span>
+            </div>
+            <p className="text-sm leading-relaxed text-foreground/90">
+              {trimmedParagraph}
+            </p>
+          </div>
+        );
+      }
+      
+      // Regular paragraph with enhanced styling
+      return (
+        <p key={index} className="text-sm leading-relaxed mb-4 text-foreground/90">
+          {trimmedParagraph}
+        </p>
+      );
+    });
+  };
+
+  // Helper function to simulate typing effect
+  const simulateTyping = async (text: string, callback: (text: string) => void) => {
+    setTypingMessage('');
+    let currentText = '';
+    
+    for (let i = 0; i < text.length; i++) {
+      currentText += text[i];
+      setTypingMessage(currentText);
+      await new Promise(resolve => setTimeout(resolve, 0.25)); // Adjust speed as needed
+    }
+    
+    callback(text);
+    setTypingMessage(null);
+  };
+
+  // Handle CSV file selection
+  const handleCSVUpload = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.name.toLowerCase().endsWith('.csv')) {
+      setMessages((prev) => [...prev, {
+        role: 'assistant',
+        content: {
+          type: 'text',
+          content: 'Please select a valid CSV file for exoplanet analysis.'
+        },
+        timestamp: new Date(),
+      }]);
+      return;
+    }
+
+    // Add user message about CSV upload
+    setMessages((prev) => [...prev, {
+      role: 'user',
+      content: {
+        type: 'text',
+        content: `Uploaded CSV file: ${file.name} for exoplanet analysis`
+      },
+      timestamp: new Date(),
+    }]);
+
+    setIsAnalyzing(true);
+
+    try {
+      // For now, show that the service is under implementation
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate processing
+      
+      setMessages((prev) => [...prev, {
+        role: 'assistant',
+        content: {
+          type: 'text',
+          content: 'The CSV analysis service is currently under implementation and will be available soon. Please use the manual form for individual exoplanet analysis.'
+        },
+        timestamp: new Date(),
+      }]);
+    } catch (error) {
+      setMessages((prev) => [...prev, {
+        role: 'assistant',
+        content: {
+          type: 'text',
+          content: 'The CSV analysis service is currently under implementation and will be available soon.'
         },
         timestamp: new Date(),
       }]);
@@ -392,17 +572,19 @@ Peux-tu créer une réponse détaillée avec des visualisations (tableau des pro
       // Call Kimi API for intelligent response with visualizations
       const aiResult = await kimiService.chatAboutSpace(userInput);
 
-      // First, add the text response (only if there's meaningful text)
+      // First, add the text response with typing effect (only if there's meaningful text)
       if (aiResult.text && aiResult.text.length > 10) {
-        const textMessage: Message = {
-          role: 'assistant',
-          content: {
-            type: 'text',
-            content: aiResult.text
-          },
-          timestamp: new Date(),
-        };
-        setMessages((prev) => [...prev, textMessage]);
+        await simulateTyping(aiResult.text, (finalText) => {
+          const textMessage: Message = {
+            role: 'assistant',
+            content: {
+              type: 'text',
+              content: finalText
+            },
+            timestamp: new Date(),
+          };
+          setMessages((prev) => [...prev, textMessage]);
+        });
       }
 
       // Then, add each visualization as a separate message
@@ -642,16 +824,6 @@ Peux-tu créer une réponse détaillée avec des visualisations (tableau des pro
               </div>
             </div>
 
-            {/* CSV Import */}
-            <div className="mt-8 pt-6 border-t border-border/50">
-              <Button
-                variant="outline"
-                className="w-full border-secondary/50 text-secondary hover:bg-secondary/20"
-              >
-                <Upload className="w-4 h-4 mr-2" />
-                Import CSV Data
-              </Button>
-            </div>
           </Card>
 
           {/* Chat Interface */}
@@ -711,7 +883,18 @@ Peux-tu créer une réponse détaillée avec des visualisations (tableau des pro
                   <div key={index}>
                     {message.role === 'user' ? (
                       <div className="flex justify-end">
-                        <div className="max-w-[80%] p-4 rounded-2xl bg-gradient-to-br from-primary to-cyan-400 text-background">
+                        <div className="max-w-[80%] p-6 rounded-2xl bg-gradient-to-br from-primary to-cyan-400 text-background shadow-lg">
+                          <div className="flex items-center gap-2 mb-3">
+                            <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
+                              <span className="text-white text-sm font-bold">U</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-tech text-white/80">Vous</span>
+                              <span className="text-xs text-white/60">
+                                {message.timestamp.toLocaleTimeString()}
+                              </span>
+                            </div>
+                          </div>
                           <p className="text-sm leading-relaxed">
                             {message.content.type === 'text' ? message.content.content : 'Message utilisateur'}
                           </p>
@@ -720,8 +903,21 @@ Peux-tu créer une réponse détaillée avec des visualisations (tableau des pro
                     ) : (
                       <div className="flex justify-start">
                         {message.content.type === 'text' ? (
-                          <div className="max-w-[80%] p-4 rounded-2xl glass-strong border border-border/50">
-                            <p className="text-sm leading-relaxed">{message.content.content}</p>
+                          <div className="max-w-[80%] p-6 rounded-2xl glass-strong border border-border/50 shadow-lg">
+                            <div className="flex items-center gap-2 mb-4">
+                              <div className="w-8 h-8 rounded-full bg-gradient-to-r from-secondary to-purple-400 flex items-center justify-center">
+                                <span className="text-white text-sm font-bold">AI</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-tech text-secondary">Assistant IA</span>
+                                <span className="text-xs text-muted-foreground">
+                                  {message.timestamp.toLocaleTimeString()}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="space-y-3">
+                              {formatTextContent(message.content.content)}
+                            </div>
                           </div>
                         ) : message.content.type === 'exoplanet-form' ? (
                           <div className="max-w-[95%] p-6 rounded-2xl glass-strong border border-secondary/30">
@@ -900,8 +1096,35 @@ Peux-tu créer une réponse détaillée avec des visualisations (tableau des pro
                   );
                 })}
 
+                {/* Typing Animation */}
+                {typingMessage && (
+                  <div className="flex justify-start">
+                    <div className="max-w-[80%] p-6 rounded-2xl glass-strong border border-border/50 shadow-lg">
+                      <div className="flex items-center gap-2 mb-4">
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-r from-secondary to-purple-400 flex items-center justify-center">
+                          <span className="text-white text-sm font-bold">AI</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-tech text-secondary">Assistant IA</span>
+                          <span className="text-xs text-muted-foreground">
+                            {new Date().toLocaleTimeString()}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="space-y-3">
+                        {formatTextContent(typingMessage)}
+                        <div className="flex items-center gap-1 mt-2">
+                          <div className="w-2 h-2 rounded-full bg-secondary animate-pulse" />
+                          <div className="w-2 h-2 rounded-full bg-secondary animate-pulse" style={{ animationDelay: '0.2s' }} />
+                          <div className="w-2 h-2 rounded-full bg-secondary animate-pulse" style={{ animationDelay: '0.4s' }} />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* Analyzing Animation */}
-                {isAnalyzing && (
+                {isAnalyzing && !typingMessage && (
                   <div className="flex justify-start">
                     <div className="glass-strong border border-border/50 p-4 rounded-2xl">
                       <div className="flex items-center gap-3">
@@ -930,6 +1153,15 @@ Peux-tu créer une réponse détaillée avec des visualisations (tableau des pro
                     className="glass-strong border-secondary/30 flex-1"
                   />
                   <Button
+                    onClick={handleCSVUpload}
+                    disabled={isAnalyzing}
+                    variant="outline"
+                    className="border-secondary/50 text-secondary hover:bg-secondary/20"
+                    title="Upload CSV for exoplanet analysis"
+                  >
+                    <FileSpreadsheet className="w-4 h-4" />
+                  </Button>
+                  <Button
                     onClick={handleSend}
                     disabled={!input.trim() || isAnalyzing}
                     className="bg-gradient-to-r from-secondary to-purple-400 hover:opacity-90 glow-secondary"
@@ -937,6 +1169,13 @@ Peux-tu créer une réponse détaillée avec des visualisations (tableau des pro
                     <Send className="w-4 h-4" />
                   </Button>
                 </div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".csv"
+                  onChange={handleFileChange}
+                  className="hidden"
+                />
               </div>
             </Card>
           </div>

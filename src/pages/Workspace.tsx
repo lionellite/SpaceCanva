@@ -1,11 +1,12 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth, useUser, SignInButton } from '@clerk/clerk-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Upload, BarChart3, TrendingUp, Database, Plus, Key, History, Loader2, FileUp, Play, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
+import { Upload, BarChart3, TrendingUp, Database, Plus, Key, History, Loader2, FileUp, Play, CheckCircle, XCircle, Clock, Download, FileText, AlertCircle, X } from 'lucide-react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 const mockAccuracyData = [
@@ -80,6 +81,19 @@ export default function Workspace() {
   const [trainingEpochs, setTrainingEpochs] = useState(50);
   const [showTrainingSection, setShowTrainingSection] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Enhanced upload states
+  const [dragActive, setDragActive] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadSuccess, setUploadSuccess] = useState<string | null>(null);
+  
+  // Polling states
+  const [isPolling, setIsPolling] = useState(false);
+  const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
+  
+  // Export states
+  const [exportingData, setExportingData] = useState(false);
 
   // Load user's workspaces on mount
   useEffect(() => {
@@ -217,16 +231,25 @@ export default function Workspace() {
     }
   };
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
+  // Enhanced file upload with drag & drop
+  const handleFileUpload = async (file: File) => {
     if (!file || !currentWorkspace) return;
 
     setUploadingFile(true);
+    setUploadProgress(0);
+    setUploadError(null);
+    setUploadSuccess(null);
+
     try {
       const formData = new FormData();
       formData.append('file', file);
       formData.append('workspace_key', currentWorkspace.workspace_key);
       formData.append('name', file.name);
+
+      // Simulate progress
+      const progressInterval = setInterval(() => {
+        setUploadProgress(prev => Math.min(prev + 10, 90));
+      }, 200);
 
       const response = await fetch('https://spacecanvabackend.onrender.com/api/training/upload-dataset', {
         method: 'POST',
@@ -236,18 +259,105 @@ export default function Workspace() {
         body: formData
       });
 
+      clearInterval(progressInterval);
+      setUploadProgress(100);
+
       if (response.ok) {
+        const result = await response.json();
+        setUploadSuccess(`Dataset "${file.name}" uploaded successfully!`);
         await loadDatasets();
         if (fileInputRef.current) {
           fileInputRef.current.value = '';
         }
+        // Clear success message after 3 seconds
+        setTimeout(() => setUploadSuccess(null), 3000);
+      } else {
+        const errorData = await response.json();
+        setUploadError(errorData.message || 'Upload failed');
       }
     } catch (error) {
       console.error('Failed to upload dataset:', error);
+      setUploadError('Network error during upload');
     } finally {
       setUploadingFile(false);
+      setUploadProgress(0);
     }
   };
+
+  const handleFileInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      handleFileUpload(file);
+    }
+  };
+
+  // Drag & drop handlers
+  const handleDrag = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      const file = e.dataTransfer.files[0];
+      if (file.type === 'text/csv' || file.name.endsWith('.csv')) {
+        handleFileUpload(file);
+      } else {
+        setUploadError('Please upload a CSV file');
+      }
+    }
+  }, [currentWorkspace]);
+
+  // Polling for training sessions
+  const startPolling = useCallback(() => {
+    if (pollingInterval) return;
+    
+    setIsPolling(true);
+    const interval = setInterval(async () => {
+      if (currentWorkspace) {
+        await loadTrainingSessions();
+      }
+    }, 3000); // Poll every 3 seconds
+    
+    setPollingInterval(interval);
+  }, [currentWorkspace, pollingInterval]);
+
+  const stopPolling = useCallback(() => {
+    if (pollingInterval) {
+      clearInterval(pollingInterval);
+      setPollingInterval(null);
+      setIsPolling(false);
+    }
+  }, [pollingInterval]);
+
+  // Auto-start polling when training sessions exist
+  useEffect(() => {
+    const hasActiveTraining = trainingSessions.some(session => 
+      session.status === 'training' || session.status === 'pending'
+    );
+    
+    if (hasActiveTraining && !isPolling) {
+      startPolling();
+    } else if (!hasActiveTraining && isPolling) {
+      stopPolling();
+    }
+  }, [trainingSessions, isPolling, startPolling, stopPolling]);
+
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      stopPolling();
+    };
+  }, [stopPolling]);
 
   const startTraining = async () => {
     if (!selectedDataset || !currentWorkspace) return;
@@ -270,11 +380,112 @@ export default function Workspace() {
       if (response.ok) {
         await loadTrainingSessions();
         setSelectedDataset(null);
+        // Start polling for this training session
+        startPolling();
       }
     } catch (error) {
       console.error('Failed to start training:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Export functions
+  const exportAnalysesToCSV = async () => {
+    if (!currentWorkspace || analyses.length === 0) return;
+
+    setExportingData(true);
+    try {
+      const csvData = analyses.map(analysis => {
+        const inputData = JSON.parse(analysis.input_data);
+        const outputData = JSON.parse(analysis.output_data);
+        
+        return {
+          id: analysis.id,
+          analysis_type: analysis.analysis_type,
+          created_at: analysis.created_at,
+          period: inputData.period,
+          duration: inputData.duration,
+          depth: inputData.depth,
+          impact: inputData.impact,
+          snr: inputData.snr,
+          steff: inputData.steff,
+          srad: inputData.srad,
+          slogg: inputData.slogg,
+          tmag: inputData.tmag,
+          predicted_label: outputData.prediction?.label,
+          confidence: outputData.prediction?.confidence,
+          is_exoplanet: outputData.prediction?.is_exoplanet
+        };
+      });
+
+      // Convert to CSV
+      const headers = Object.keys(csvData[0]);
+      const csvContent = [
+        headers.join(','),
+        ...csvData.map(row => headers.map(header => row[header]).join(','))
+      ].join('\n');
+
+      // Download file
+      const blob = new Blob([csvContent], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `spacecanva_analyses_${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Failed to export data:', error);
+    } finally {
+      setExportingData(false);
+    }
+  };
+
+  const exportTrainingSessionsToCSV = async () => {
+    if (!currentWorkspace || trainingSessions.length === 0) return;
+
+    setExportingData(true);
+    try {
+      const csvData = trainingSessions.map(session => {
+        const metrics = session.metrics ? JSON.parse(session.metrics) : {};
+        
+        return {
+          id: session.id,
+          model_name: session.model_name,
+          dataset_size: session.dataset_size,
+          status: session.status,
+          epochs_completed: session.epochs_completed,
+          accuracy: metrics.accuracy ? (metrics.accuracy * 100).toFixed(2) : 'N/A',
+          val_accuracy: metrics.val_accuracy ? (metrics.val_accuracy * 100).toFixed(2) : 'N/A',
+          loss: metrics.loss ? metrics.loss.toFixed(4) : 'N/A',
+          created_at: session.created_at,
+          completed_at: session.completed_at
+        };
+      });
+
+      // Convert to CSV
+      const headers = Object.keys(csvData[0]);
+      const csvContent = [
+        headers.join(','),
+        ...csvData.map(row => headers.map(header => row[header]).join(','))
+      ].join('\n');
+
+      // Download file
+      const blob = new Blob([csvContent], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `spacecanva_training_sessions_${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Failed to export training data:', error);
+    } finally {
+      setExportingData(false);
     }
   };
 
@@ -594,32 +805,140 @@ export default function Workspace() {
 
             {showTrainingSection && (
               <div className="space-y-6">
-                {/* Upload Dataset */}
+                {/* Enhanced Upload Dataset */}
                 <div>
                   <h4 className="font-semibold mb-3">Upload Training Dataset</h4>
-                  <div className="flex items-center gap-3">
+                  
+                  {/* Drag & Drop Zone */}
+                  <div
+                    className={`relative border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+                      dragActive
+                        ? 'border-cyan-400 bg-cyan-400/10'
+                        : 'border-cyan-400/30 hover:border-cyan-400/50'
+                    } ${uploadingFile ? 'pointer-events-none opacity-50' : 'cursor-pointer'}`}
+                    onDragEnter={handleDrag}
+                    onDragLeave={handleDrag}
+                    onDragOver={handleDrag}
+                    onDrop={handleDrop}
+                    onClick={() => fileInputRef.current?.click()}
+                  >
                     <Input
                       ref={fileInputRef}
                       type="file"
                       accept=".csv"
-                      onChange={handleFileUpload}
+                      onChange={handleFileInputChange}
                       className="hidden"
                     />
-                    <Button
-                      onClick={() => fileInputRef.current?.click()}
-                      disabled={uploadingFile}
-                      variant="outline"
-                      className="border-cyan-400/50"
-                    >
-                      {uploadingFile ? (
-                        <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Uploading...</>
-                      ) : (
-                        <><FileUp className="w-4 h-4 mr-2" /> Upload CSV</>
-                      )}
-                    </Button>
-                    <span className="text-sm text-muted-foreground">
-                      CSV with columns: period, duration, depth, impact, snr, steff, srad, slogg, tmag, label
-                    </span>
+                    
+                    {uploadingFile ? (
+                      <div className="space-y-4">
+                        <Loader2 className="w-12 h-12 mx-auto text-cyan-400 animate-spin" />
+                        <div className="space-y-2">
+                          <p className="text-sm font-medium">Uploading dataset...</p>
+                          <Progress value={uploadProgress} className="w-full max-w-xs mx-auto" />
+                          <p className="text-xs text-muted-foreground">{uploadProgress}% complete</p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        <Upload className="w-12 h-12 mx-auto text-cyan-400" />
+                        <div>
+                          <p className="text-lg font-medium mb-2">
+                            Drop your CSV file here or click to browse
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            Supported format: CSV files only
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Upload Status Messages */}
+                  {uploadError && (
+                    <div className="mt-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center gap-2">
+                      <AlertCircle className="w-4 h-4 text-red-500" />
+                      <span className="text-sm text-red-500">{uploadError}</span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setUploadError(null)}
+                        className="ml-auto h-6 w-6 p-0"
+                      >
+                        <X className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  )}
+
+                  {uploadSuccess && (
+                    <div className="mt-4 p-3 rounded-lg bg-green-500/10 border border-green-500/20 flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4 text-green-500" />
+                      <span className="text-sm text-green-500">{uploadSuccess}</span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setUploadSuccess(null)}
+                        className="ml-auto h-6 w-6 p-0"
+                      >
+                        <X className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  )}
+
+                  {/* CSV Format Info */}
+                  <div className="mt-4 p-4 rounded-lg bg-muted/50 border border-border/30">
+                    <h5 className="font-medium text-sm mb-2 flex items-center gap-2">
+                      <FileText className="w-4 h-4" />
+                      Required CSV Format
+                    </h5>
+                    <p className="text-xs text-muted-foreground mb-2">
+                      Your CSV file must contain these columns (in any order):
+                    </p>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">period:</span>
+                        <span className="font-mono">float (days)</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">duration:</span>
+                        <span className="font-mono">float (hours)</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">depth:</span>
+                        <span className="font-mono">float (ppm)</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">impact:</span>
+                        <span className="font-mono">float (0-1)</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">snr:</span>
+                        <span className="font-mono">float</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">steff:</span>
+                        <span className="font-mono">float (K)</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">srad:</span>
+                        <span className="font-mono">float (R☉)</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">slogg:</span>
+                        <span className="font-mono">float (dex)</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">tmag:</span>
+                        <span className="font-mono">float (mag)</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">label:</span>
+                        <span className="font-mono">int (0,1,2)</span>
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      <strong>Labels:</strong> 0=CANDIDATE, 1=CONFIRMED, 2=FALSE POSITIVE
+                    </p>
                   </div>
                 </div>
 
@@ -693,18 +1012,56 @@ export default function Workspace() {
                 {/* Training Sessions */}
                 {trainingSessions.length > 0 && (
                   <div>
-                    <h4 className="font-semibold mb-3">Training Sessions ({trainingSessions.length})</h4>
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="font-semibold">Training Sessions ({trainingSessions.length})</h4>
+                      <div className="flex items-center gap-2">
+                        {isPolling && (
+                          <Badge variant="outline" className="text-cyan-400 border-cyan-400/50">
+                            <Clock className="w-3 h-3 mr-1 animate-pulse" />
+                            Live Updates
+                          </Badge>
+                        )}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={exportTrainingSessionsToCSV}
+                          disabled={exportingData}
+                          className="border-cyan-400/50 text-cyan-400 hover:bg-cyan-400/20"
+                        >
+                          {exportingData ? (
+                            <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> Exporting...</>
+                          ) : (
+                            <><Download className="w-3 h-3 mr-1" /> Export CSV</>
+                          )}
+                        </Button>
+                      </div>
+                    </div>
                     <div className="space-y-3">
                       {trainingSessions.map((session) => {
                         const metrics = session.metrics ? JSON.parse(session.metrics) : {};
+                        const isActive = session.status === 'training' || session.status === 'pending';
+                        
                         return (
                           <div
                             key={session.id}
-                            className="p-4 rounded-lg bg-background/50 border border-border/30"
+                            className={`p-4 rounded-lg border transition-colors ${
+                              isActive
+                                ? 'bg-cyan-400/5 border-cyan-400/30'
+                                : 'bg-background/50 border-border/30'
+                            }`}
                           >
-                            <div className="flex items-start justify-between mb-2">
-                              <div>
-                                <p className="font-medium text-sm">{session.model_name}</p>
+                            <div className="flex items-start justify-between mb-3">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <p className="font-medium text-sm">{session.model_name}</p>
+                                  {isActive && (
+                                    <div className="flex gap-1">
+                                      <div className="w-1 h-1 rounded-full bg-cyan-400 animate-pulse" />
+                                      <div className="w-1 h-1 rounded-full bg-cyan-400 animate-pulse" style={{ animationDelay: '0.2s' }} />
+                                      <div className="w-1 h-1 rounded-full bg-cyan-400 animate-pulse" style={{ animationDelay: '0.4s' }} />
+                                    </div>
+                                  )}
+                                </div>
                                 <p className="text-xs text-muted-foreground">
                                   {new Date(session.created_at).toLocaleString()}
                                 </p>
@@ -727,6 +1084,21 @@ export default function Workspace() {
                                 {session.status}
                               </Badge>
                             </div>
+                            
+                            {/* Progress Bar for Active Training */}
+                            {isActive && (
+                              <div className="mb-3">
+                                <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                                  <span>Training Progress</span>
+                                  <span>{session.epochs_completed} / {trainingEpochs} epochs</span>
+                                </div>
+                                <Progress 
+                                  value={(session.epochs_completed / trainingEpochs) * 100} 
+                                  className="h-2"
+                                />
+                              </div>
+                            )}
+                            
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
                               <div>
                                 <span className="text-muted-foreground">Dataset:</span>
@@ -749,6 +1121,34 @@ export default function Workspace() {
                                 </div>
                               )}
                             </div>
+                            
+                            {/* Additional Metrics for Completed Training */}
+                            {session.status === 'completed' && metrics && (
+                              <div className="mt-3 pt-3 border-t border-border/20">
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-xs">
+                                  {metrics.loss && (
+                                    <div>
+                                      <span className="text-muted-foreground">Loss:</span>
+                                      <span className="ml-1 font-medium">{metrics.loss.toFixed(4)}</span>
+                                    </div>
+                                  )}
+                                  {metrics.val_loss && (
+                                    <div>
+                                      <span className="text-muted-foreground">Val Loss:</span>
+                                      <span className="ml-1 font-medium">{metrics.val_loss.toFixed(4)}</span>
+                                    </div>
+                                  )}
+                                  {session.completed_at && (
+                                    <div>
+                                      <span className="text-muted-foreground">Duration:</span>
+                                      <span className="ml-1 font-medium">
+                                        {Math.round((new Date(session.completed_at).getTime() - new Date(session.created_at).getTime()) / 60000)}m
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            )}
                           </div>
                         );
                       })}
@@ -763,10 +1163,25 @@ export default function Workspace() {
         {/* Analysis History */}
         {currentWorkspace && analyses.length > 0 && (
           <Card className="glass-strong p-6 border-cyan-400/30">
-            <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
-              <History className="w-5 h-5 text-cyan-400" />
-              Analysis History
-            </h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-bold flex items-center gap-2">
+                <History className="w-5 h-5 text-cyan-400" />
+                Analysis History
+              </h3>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={exportAnalysesToCSV}
+                disabled={exportingData}
+                className="border-cyan-400/50 text-cyan-400 hover:bg-cyan-400/20"
+              >
+                {exportingData ? (
+                  <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> Exporting...</>
+                ) : (
+                  <><Download className="w-3 h-3 mr-1" /> Export CSV</>
+                )}
+              </Button>
+            </div>
             <div className="space-y-3">
               {analyses.map((analysis) => {
                 const inputData = JSON.parse(analysis.input_data);

@@ -1,0 +1,6 @@
+mission,period,duration,depth,impact,snr,steff,srad,slogg,tmag
+kepler,invalid_period,2.5,1000,0.3,15.2,5778,1.0,4.5,12.5
+tess,3.52,invalid_duration,850,0.1,18.7,5200,0.8,4.6,11.8
+kepler,5.12,3.2,invalid_depth,0.2,22.1,4800,0.7,4.7,10.9
+tess,7.45,4.1,750,invalid_impact,12.3,6200,1.2,4.4,13.1
+kepler,2.33,2.1,950,0.4,invalid_snr,5500,0.9,4.5,12.7

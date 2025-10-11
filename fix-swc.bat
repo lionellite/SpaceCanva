@@ -1,0 +1,16 @@
+@echo off
+echo Fixing SWC issue...
+
+echo Removing node_modules...
+rmdir /s /q node_modules
+
+echo Removing package-lock.json...
+del package-lock.json
+
+echo Installing dependencies...
+npm install
+
+echo Starting dev server...
+npm run dev
+
+pause
